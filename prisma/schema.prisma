@@ -167,11 +167,10 @@ model SaleSession {
   completedAt   DateTime?
   cancelledAt   DateTime?
 
-  business     Business          @relation(fields: [businessId], references: [id], onDelete: Cascade)
-  user         BusinessMember    @relation(fields: [userId], references: [id], onDelete: Restrict)
-  items        SaleSessionItem[]
-  reservations Reservation[]
-  sale         Sale?
+  business Business          @relation(fields: [businessId], references: [id], onDelete: Cascade)
+  user     BusinessMember    @relation(fields: [userId], references: [id], onDelete: Restrict)
+  items    SaleSessionItem[]
+  sale     Sale?
 
   @@index([businessId, status])
   @@index([userId, status])
