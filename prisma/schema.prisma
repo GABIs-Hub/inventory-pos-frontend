@@ -50,12 +50,13 @@ model Business {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  members     BusinessMember[]
-  products    Product[]
-  customers   Customer[]
-  saleSessions SaleSession[]
-  sales       Sale[]
-  auditLogs   AuditLog[]
+  members        BusinessMember[]
+  products       Product[]
+  customers      Customer[]
+  saleSessions   SaleSession[]
+  sales          Sale[]
+  auditLogs      AuditLog[]
+  stockMovements StockMovement[]
 
   @@index([name])
 }
@@ -68,11 +69,11 @@ model BusinessMember {
   createdAt  DateTime           @default(now())
   updatedAt  DateTime           @updatedAt
 
-  business     Business @relation(fields: [businessId], references: [id], onDelete: Cascade)
-  saleSessions SaleSession[]
-  sales        Sale[]
+  business       Business        @relation(fields: [businessId], references: [id], onDelete: Cascade)
+  saleSessions   SaleSession[]
+  sales          Sale[]
   stockMovements StockMovement[]
-  auditLogs    AuditLog[]
+  auditLogs      AuditLog[]
 
   @@unique([businessId, userId])
   @@index([userId])
@@ -91,12 +92,12 @@ model Product {
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
 
-  business      Business       @relation(fields: [businessId], references: [id], onDelete: Cascade)
-  inventory     Inventory?
-  stockMovements StockMovement[]
+  business         Business          @relation(fields: [businessId], references: [id], onDelete: Cascade)
+  inventory        Inventory?
+  stockMovements   StockMovement[]
   saleSessionItems SaleSessionItem[]
-  saleItems     SaleItem[]
-  reservations  Reservation[]
+  saleItems        SaleItem[]
+  reservations     Reservation[]
 
   @@unique([businessId, name])
   @@unique([businessId, sku])
@@ -117,7 +118,7 @@ model Inventory {
 }
 
 model StockMovement {
-  id          String             @id @default(cuid())
+  id          String            @id @default(cuid())
   businessId  String
   productId   String
   type        StockMovementType
@@ -125,7 +126,7 @@ model StockMovement {
   reason      String?
   referenceId String?
   createdById String
-  createdAt   DateTime           @default(now())
+  createdAt   DateTime          @default(now())
 
   business  Business       @relation(fields: [businessId], references: [id], onDelete: Cascade)
   product   Product        @relation(fields: [productId], references: [id], onDelete: Restrict)
@@ -154,23 +155,23 @@ model Customer {
 }
 
 model SaleSession {
-  id           String            @id @default(cuid())
-  businessId   String
-  userId       String
-  status       SaleSessionStatus @default(ACTIVE)
-  completionKey String?          @unique
-  clientId     String?
-  createdAt    DateTime          @default(now())
-  updatedAt    DateTime          @updatedAt
-  expiresAt    DateTime?
-  completedAt  DateTime?
-  cancelledAt  DateTime?
+  id            String            @id @default(cuid())
+  businessId    String
+  userId        String
+  status        SaleSessionStatus @default(ACTIVE)
+  completionKey String?           @unique
+  clientId      String?
+  createdAt     DateTime          @default(now())
+  updatedAt     DateTime          @updatedAt
+  expiresAt     DateTime?
+  completedAt   DateTime?
+  cancelledAt   DateTime?
 
-  business Business       @relation(fields: [businessId], references: [id], onDelete: Cascade)
-  user     BusinessMember @relation(fields: [userId], references: [id], onDelete: Restrict)
-  items    SaleSessionItem[]
+  business     Business          @relation(fields: [businessId], references: [id], onDelete: Cascade)
+  user         BusinessMember    @relation(fields: [userId], references: [id], onDelete: Restrict)
+  items        SaleSessionItem[]
   reservations Reservation[]
-  sale     Sale?
+  sale         Sale?
 
   @@index([businessId, status])
   @@index([userId, status])
@@ -179,16 +180,16 @@ model SaleSession {
 }
 
 model SaleSessionItem {
-  id            String   @id @default(cuid())
-  saleSessionId String
-  productId     String
-  quantity      Int
-  unitSellingPrice Decimal @db.Decimal(14, 2)
-  createdAt     DateTime @default(now())
-  updatedAt     DateTime @updatedAt
+  id               String   @id @default(cuid())
+  saleSessionId    String
+  productId        String
+  quantity         Int
+  unitSellingPrice Decimal  @db.Decimal(14, 2)
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
 
-  saleSession SaleSession @relation(fields: [saleSessionId], references: [id], onDelete: Cascade)
-  product     Product     @relation(fields: [productId], references: [id], onDelete: Restrict)
+  saleSession SaleSession  @relation(fields: [saleSessionId], references: [id], onDelete: Cascade)
+  product     Product      @relation(fields: [productId], references: [id], onDelete: Restrict)
   reservation Reservation?
 
   @@unique([saleSessionId, productId])
@@ -207,25 +208,27 @@ model Reservation {
 
   saleSessionItem SaleSessionItem @relation(fields: [saleSessionItemId], references: [id], onDelete: Cascade)
   product         Product         @relation(fields: [productId], references: [id], onDelete: Restrict)
+  saleSession     SaleSession?    @relation(fields: [saleSessionId], references: [id])
+  saleSessionId   String?
 
   @@index([productId, status])
   @@index([status, expiresAt])
 }
 
 model Sale {
-  id              String     @id @default(cuid())
-  businessId      String
-  saleSessionId   String     @unique
-  soldById        String
-  customerId      String?
-  customerName    String?
-  customerPhone   String?
-  saleNumber      String
-  subtotal        Decimal    @db.Decimal(14, 2)
-  discount        Decimal    @db.Decimal(14, 2) @default(0)
-  total           Decimal    @db.Decimal(14, 2)
-  status          SaleStatus @default(COMPLETED)
-  createdAt       DateTime   @default(now())
+  id            String     @id @default(cuid())
+  businessId    String
+  saleSessionId String     @unique
+  soldById      String
+  customerId    String?
+  customerName  String?
+  customerPhone String?
+  saleNumber    String
+  subtotal      Decimal    @db.Decimal(14, 2)
+  discount      Decimal    @default(0) @db.Decimal(14, 2)
+  total         Decimal    @db.Decimal(14, 2)
+  status        SaleStatus @default(COMPLETED)
+  createdAt     DateTime   @default(now())
 
   business    Business       @relation(fields: [businessId], references: [id], onDelete: Cascade)
   saleSession SaleSession    @relation(fields: [saleSessionId], references: [id], onDelete: Restrict)
@@ -241,11 +244,11 @@ model Sale {
 }
 
 model SaleItem {
-  id              String  @id @default(cuid())
-  saleId          String
-  productId       String
-  productName     String
-  quantity        Int
+  id               String  @id @default(cuid())
+  saleId           String
+  productId        String
+  productName      String
+  quantity         Int
   unitSellingPrice Decimal @db.Decimal(14, 2)
   unitCostPrice    Decimal @db.Decimal(14, 2)
   subtotal         Decimal @db.Decimal(14, 2)
