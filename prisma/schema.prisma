@@ -208,8 +208,6 @@ model Reservation {
 
   saleSessionItem SaleSessionItem @relation(fields: [saleSessionItemId], references: [id], onDelete: Cascade)
   product         Product         @relation(fields: [productId], references: [id], onDelete: Restrict)
-  saleSession     SaleSession?    @relation(fields: [saleSessionId], references: [id])
-  saleSessionId   String?
 
   @@index([productId, status])
   @@index([status, expiresAt])
