@@ -1,8 +1,3 @@
-// This is your Prisma schema file,
-// learn more about it in the docs: https://pris.ly/d/prisma-schema
-
-// Get a free hosted Postgres database in seconds: `npx create-db`
-
 generator client {
   provider = "prisma-client"
   output   = "../src/generated/prisma"
@@ -10,4 +5,284 @@ generator client {
 
 datasource db {
   provider = "postgresql"
+}
+
+enum BusinessMemberRole {
+  ADMIN
+  SALES_REP
+}
+
+enum SaleSessionStatus {
+  ACTIVE
+  COMPLETED
+  CANCELLED
+  EXPIRED
+}
+
+enum ReservationStatus {
+  ACTIVE
+  RELEASED
+  CONSUMED
+  EXPIRED
+}
+
+enum StockMovementType {
+  STOCK_IN
+  SALE
+  ADJUSTMENT
+  RETURN
+}
+
+enum SaleStatus {
+  COMPLETED
+  VOID
+}
+
+enum InvoiceStatus {
+  ISSUED
+  VOID
+}
+
+model Business {
+  id        String   @id @default(cuid())
+  name      String
+  currency  String   @default("NGN")
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  members     BusinessMember[]
+  products    Product[]
+  customers   Customer[]
+  saleSessions SaleSession[]
+  sales       Sale[]
+  auditLogs   AuditLog[]
+
+  @@index([name])
+}
+
+model BusinessMember {
+  id         String             @id @default(cuid())
+  businessId String
+  userId     String
+  role       BusinessMemberRole @default(SALES_REP)
+  createdAt  DateTime           @default(now())
+  updatedAt  DateTime           @updatedAt
+
+  business     Business @relation(fields: [businessId], references: [id], onDelete: Cascade)
+  saleSessions SaleSession[]
+  sales        Sale[]
+  stockMovements StockMovement[]
+  auditLogs    AuditLog[]
+
+  @@unique([businessId, userId])
+  @@index([userId])
+  @@index([businessId, role])
+}
+
+model Product {
+  id           String   @id @default(cuid())
+  businessId   String
+  name         String
+  description  String?
+  sku          String?
+  costPrice    Decimal  @db.Decimal(14, 2)
+  sellingPrice Decimal  @db.Decimal(14, 2)
+  isArchived   Boolean  @default(false)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  business      Business       @relation(fields: [businessId], references: [id], onDelete: Cascade)
+  inventory     Inventory?
+  stockMovements StockMovement[]
+  saleSessionItems SaleSessionItem[]
+  saleItems     SaleItem[]
+  reservations  Reservation[]
+
+  @@unique([businessId, name])
+  @@unique([businessId, sku])
+  @@index([businessId, isArchived])
+}
+
+model Inventory {
+  id               String   @id @default(cuid())
+  productId        String   @unique
+  quantity         Int      @default(0)
+  reservedQuantity Int      @default(0)
+  updatedAt        DateTime @updatedAt
+
+  product Product @relation(fields: [productId], references: [id], onDelete: Cascade)
+
+  @@index([quantity])
+  @@index([reservedQuantity])
+}
+
+model StockMovement {
+  id          String             @id @default(cuid())
+  businessId  String
+  productId   String
+  type        StockMovementType
+  quantity    Int
+  reason      String?
+  referenceId String?
+  createdById String
+  createdAt   DateTime           @default(now())
+
+  business  Business       @relation(fields: [businessId], references: [id], onDelete: Cascade)
+  product   Product        @relation(fields: [productId], references: [id], onDelete: Restrict)
+  createdBy BusinessMember @relation(fields: [createdById], references: [id], onDelete: Restrict)
+
+  @@index([businessId, createdAt])
+  @@index([productId, createdAt])
+  @@index([referenceId])
+}
+
+model Customer {
+  id         String   @id @default(cuid())
+  businessId String
+  name       String
+  phone      String?
+  email      String?
+  address    String?
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  business Business @relation(fields: [businessId], references: [id], onDelete: Cascade)
+  sales    Sale[]
+
+  @@index([businessId, name])
+  @@index([businessId, phone])
+}
+
+model SaleSession {
+  id           String            @id @default(cuid())
+  businessId   String
+  userId       String
+  status       SaleSessionStatus @default(ACTIVE)
+  completionKey String?          @unique
+  clientId     String?
+  createdAt    DateTime          @default(now())
+  updatedAt    DateTime          @updatedAt
+  expiresAt    DateTime?
+  completedAt  DateTime?
+  cancelledAt  DateTime?
+
+  business Business       @relation(fields: [businessId], references: [id], onDelete: Cascade)
+  user     BusinessMember @relation(fields: [userId], references: [id], onDelete: Restrict)
+  items    SaleSessionItem[]
+  reservations Reservation[]
+  sale     Sale?
+
+  @@index([businessId, status])
+  @@index([userId, status])
+  @@index([expiresAt])
+  @@index([clientId])
+}
+
+model SaleSessionItem {
+  id            String   @id @default(cuid())
+  saleSessionId String
+  productId     String
+  quantity      Int
+  unitSellingPrice Decimal @db.Decimal(14, 2)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  saleSession SaleSession @relation(fields: [saleSessionId], references: [id], onDelete: Cascade)
+  product     Product     @relation(fields: [productId], references: [id], onDelete: Restrict)
+  reservation Reservation?
+
+  @@unique([saleSessionId, productId])
+  @@index([productId])
+}
+
+model Reservation {
+  id                String            @id @default(cuid())
+  saleSessionItemId String            @unique
+  productId         String
+  quantity          Int
+  status            ReservationStatus @default(ACTIVE)
+  expiresAt         DateTime
+  createdAt         DateTime          @default(now())
+  releasedAt        DateTime?
+
+  saleSessionItem SaleSessionItem @relation(fields: [saleSessionItemId], references: [id], onDelete: Cascade)
+  product         Product         @relation(fields: [productId], references: [id], onDelete: Restrict)
+
+  @@index([productId, status])
+  @@index([status, expiresAt])
+}
+
+model Sale {
+  id              String     @id @default(cuid())
+  businessId      String
+  saleSessionId   String     @unique
+  soldById        String
+  customerId      String?
+  customerName    String?
+  customerPhone   String?
+  saleNumber      String
+  subtotal        Decimal    @db.Decimal(14, 2)
+  discount        Decimal    @db.Decimal(14, 2) @default(0)
+  total           Decimal    @db.Decimal(14, 2)
+  status          SaleStatus @default(COMPLETED)
+  createdAt       DateTime   @default(now())
+
+  business    Business       @relation(fields: [businessId], references: [id], onDelete: Cascade)
+  saleSession SaleSession    @relation(fields: [saleSessionId], references: [id], onDelete: Restrict)
+  soldBy      BusinessMember @relation(fields: [soldById], references: [id], onDelete: Restrict)
+  customer    Customer?      @relation(fields: [customerId], references: [id], onDelete: SetNull)
+  items       SaleItem[]
+  invoice     Invoice?
+
+  @@unique([businessId, saleNumber])
+  @@index([businessId, createdAt])
+  @@index([soldById, createdAt])
+  @@index([customerId, createdAt])
+}
+
+model SaleItem {
+  id              String  @id @default(cuid())
+  saleId          String
+  productId       String
+  productName     String
+  quantity        Int
+  unitSellingPrice Decimal @db.Decimal(14, 2)
+  unitCostPrice    Decimal @db.Decimal(14, 2)
+  subtotal         Decimal @db.Decimal(14, 2)
+
+  sale    Sale    @relation(fields: [saleId], references: [id], onDelete: Cascade)
+  product Product @relation(fields: [productId], references: [id], onDelete: Restrict)
+
+  @@index([saleId])
+  @@index([productId])
+}
+
+model Invoice {
+  id            String        @id @default(cuid())
+  saleId        String        @unique
+  invoiceNumber String        @unique
+  status        InvoiceStatus @default(ISSUED)
+  issuedAt      DateTime      @default(now())
+  createdAt     DateTime      @default(now())
+  updatedAt     DateTime      @updatedAt
+
+  sale Sale @relation(fields: [saleId], references: [id], onDelete: Restrict)
+}
+
+model AuditLog {
+  id         String   @id @default(cuid())
+  businessId String
+  userId     String
+  action     String
+  entityType String
+  entityId   String
+  metadata   Json?
+  createdAt  DateTime @default(now())
+
+  business Business       @relation(fields: [businessId], references: [id], onDelete: Cascade)
+  user     BusinessMember @relation(fields: [userId], references: [id], onDelete: Restrict)
+
+  @@index([businessId, createdAt])
+  @@index([entityType, entityId])
+  @@index([userId, createdAt])
 }
