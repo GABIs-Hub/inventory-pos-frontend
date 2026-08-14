@@ -1,23 +1,20 @@
-import { NextResponse } from "next/server";
-import { prisma } from "@/lib/db/prisma";
+import { checkDatabaseConnection } from "@/lib/db/health";
 
 export async function GET() {
   try {
-    const businessCount = await prisma.business.count();
+    await checkDatabaseConnection();
 
-    return NextResponse.json({
+    return Response.json({
       status: "ok",
       database: "connected",
-      businessCount,
     });
   } catch (error) {
-    console.error("DATABASE HEALTH CHECK ERROR:", error);
+    console.error("Database health check failed:", error);
 
-    return NextResponse.json(
+    return Response.json(
       {
-        status: "ok",
-        database: "connected",
-        error: error instanceof Error ? error.message : String(error),
+        status: "error",
+        database: "disconnected",
       },
       { status: 503 },
     );
