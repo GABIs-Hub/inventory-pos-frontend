@@ -1,8 +1,9 @@
+import { NextResponse } from "next/server";
 import { AppError } from "@/lib/errors/app-error";
 
 export function errorResponse(error: unknown) {
   if (error instanceof AppError) {
-    return Response.json(
+    return NextResponse.json(
       {
         error: {
           code: error.code,
@@ -15,7 +16,7 @@ export function errorResponse(error: unknown) {
 
   console.error("Unhandled application error:", error);
 
-  return Response.json(
+  return NextResponse.json(
     {
       error: {
         code: "INTERNAL_ERROR",
