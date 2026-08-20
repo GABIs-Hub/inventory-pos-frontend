@@ -10,13 +10,14 @@ export async function GET() {
       businessCount,
     });
   } catch (error) {
+    console.error("Database environment health check failed:", error);
+
     return NextResponse.json(
       {
         status: "error",
         database: "unavailable",
-        error: error instanceof Error ? error.message : String(error),
       },
-      { status: 500 }
+      { status: 503 },
     );
   }
 }
