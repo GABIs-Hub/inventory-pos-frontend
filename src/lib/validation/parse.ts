@@ -17,3 +17,26 @@ export function parseBody<T extends z.ZodType>(
 
   return result.data;
 }
+
+/**
+ * Parses and validates URL query parameters using the same error contract as
+ * JSON request bodies.
+ */
+export function parseQuery<T extends z.ZodType>(
+  schema: T,
+  searchParams: URLSearchParams,
+): z.output<T> {
+  const result = schema.safeParse(
+    Object.fromEntries(searchParams.entries()),
+  );
+
+  if (!result.success) {
+    throw new AppError(
+      "VALIDATION_ERROR",
+      "The request contains invalid query parameters.",
+      422,
+    );
+  }
+
+  return result.data;
+}
