@@ -4,6 +4,7 @@ import type { BusinessMemberRole } from "@/generated/prisma/client";
 import { prisma } from "@/lib/db/prisma";
 import { requireCurrentUser } from "@/lib/auth/user";
 import { AppError } from "@/lib/errors/app-error";
+import { assertAllowedBusinessRole } from "@/lib/auth/authorization";
 
 /**
  * Returns every business membership for the authenticated Neon Auth user.
@@ -59,13 +60,7 @@ export async function requireBusinessRole(
 ) {
   const membership = await requireBusinessMembership(businessId);
 
-  if (!allowedRoles.includes(membership.role)) {
-    throw new AppError(
-      "FORBIDDEN",
-      "You do not have permission to perform this action.",
-      403,
-    );
-  }
+  assertAllowedBusinessRole(membership.role, allowedRoles);
 
   return membership;
 }
