@@ -45,9 +45,9 @@ model BusinessMember {
 model Product {
   id               String            @id @default(cuid())
   businessId       String
-  name             String
+  name             String            @db.Citext
   description      String?
-  sku              String?
+  sku              String?           @db.Citext
   costPrice        Decimal           @db.Decimal(14, 2)
   sellingPrice     Decimal           @db.Decimal(14, 2)
   isArchived       Boolean           @default(false)
